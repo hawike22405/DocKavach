@@ -8,7 +8,10 @@ DocKavach is currently a Next.js 14 + TypeScript + Tailwind frontend for an AI-b
 cd frontend
 npm install
 cp .env.local.example .env.local
-npm run dev
+  npm run dev
+  or
+  npm run build
+  npm run start
 ```
 
 ## Frontend structure
