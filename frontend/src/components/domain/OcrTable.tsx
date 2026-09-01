@@ -1,29 +1,49 @@
+"use client";
+
+import { useState } from "react";
+import { Pencil } from "lucide-react";
 import type { ScreeningResponse } from "@/lib/types";
 
-export function OcrTable({ data }: { data: ScreeningResponse["module1_OCR"] }) {
-  const rows = [
-    ["Name", data.name],
-    ["Document number", data.documentNumber],
-    ["Date of birth", data.dob],
-    ["Expiry", data.expiry],
-    ["Nationality", data.nationality],
-  ];
+type OcrFields = ScreeningResponse["module1_OCR"];
+
+const ROW_LABELS: Record<keyof Omit<OcrFields, "mrz">, string> = {
+  name: "Name",
+  documentNumber: "Passport No.",
+  dob: "Date of birth",
+  expiry: "Expiry date",
+  nationality: "Nationality",
+};
+
+export function OcrTable({ fields }: { fields: OcrFields }) {
+  const [values, setValues] = useState(fields);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
 
   return (
-    <div className="overflow-hidden rounded-md border border-border">
-      <table className="w-full text-sm">
+    <div>
+      <table className="w-full border-collapse text-sm">
         <tbody>
-          {rows.map(([label, value]) => (
-            <tr key={label} className="border-b border-border last:border-0">
-              <th className="w-1/3 px-3 py-2 text-left font-medium text-slate-400">{label}</th>
-              <td className="px-3 py-2 text-slate-200">{value}</td>
+          {(Object.keys(ROW_LABELS) as Array<keyof typeof ROW_LABELS>).map((key) => (
+            <tr key={key} className="border-b border-border last:border-0">
+              <th scope="row" className="w-36 py-2 pr-3 text-left align-middle text-xs font-normal text-slate-400">
+                {ROW_LABELS[key]}
+              </th>
+              <td className="py-2 align-middle">
+                {editingKey === key ? (
+                  <input autoFocus value={values[key]} onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))} onBlur={() => setEditingKey(null)} onKeyDown={(e) => e.key === "Enter" && setEditingKey(null)} className="w-full rounded border border-accent bg-slate-950 px-2 py-1 font-mono text-sm text-slate-100 outline-none" />
+                ) : (
+                  <button type="button" onClick={() => setEditingKey(key)} className="group flex w-full items-center justify-between gap-2 rounded px-2 py-1 text-left font-mono text-slate-100 hover:bg-surface-raised">
+                    {values[key]}
+                    <Pencil className="h-3.5 w-3.5 shrink-0 text-slate-600 opacity-0 group-hover:opacity-100" aria-hidden="true" />
+                  </button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
-      <div className="border-t border-border px-3 py-2">
-        <p className="mb-1 text-xs font-medium text-slate-500">MRZ</p>
-        <pre className="whitespace-pre-wrap break-all font-mono text-xs text-slate-300">{data.mrz}</pre>
+      <div className="mt-3 rounded border border-border bg-slate-950 px-3 py-2">
+        <p className="text-xs text-slate-500">MRZ</p>
+        <pre className="mt-1 overflow-x-auto font-mono text-xs leading-5 text-slate-300">{values.mrz}</pre>
       </div>
     </div>
   );
