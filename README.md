@@ -1,66 +1,36 @@
-# SSB Document Screening — Frontend
+# DocKavach
 
-Next.js (App Router) + TypeScript + Tailwind frontend for the AI-based
-document screening dashboard described in `PRD.md` / `TechSpec.md`.
+DocKavach is currently a Next.js 14 + TypeScript + Tailwind frontend for an AI-based document screening dashboard. The frontend lives entirely under `frontend/` so a backend can be added cleanly at the repository root later.
 
-## Setup
+## Frontend setup
 
 ```bash
+cd frontend
 npm install
 cp .env.local.example .env.local
 npm run dev
 ```
 
-## File structure
+## Frontend structure
 
-```
-screening-system/
+```text
+frontend/
 ├── src/
-│   ├── app/
-│   │   ├── layout.tsx          Root layout — mounts the persistent sidebar
-│   │   ├── page.tsx            Dashboard: capture → processing → results
-│   │   ├── globals.css
-│   │   ├── history/page.tsx    Audit trail (stub)
-│   │   └── settings/page.tsx   Station settings (stub)
+│   ├── app/                 # Next.js App Router pages and global styles
 │   ├── components/
-│   │   ├── layout/
-│   │   │   ├── Sidebar.tsx        Dashboard / Scan Document / History / Settings nav
-│   │   │   └── LiquidNavBar.tsx   Floating glassmorphic nav (Framer Motion pill)
-│   │   ├── domain/
-│   │   │   ├── DocumentUploader.tsx   Drag-and-drop passport/visa upload
-│   │   │   ├── FaceCapture.tsx        react-webcam live capture
-│   │   │   ├── ProcessingStepper.tsx  4-module progress indicator
-│   │   │   ├── ResultsView.tsx        Composes the panels below
-│   │   │   ├── RiskGauge.tsx          Circular risk score (green/amber/red)
-│   │   │   ├── OcrTable.tsx           Editable extracted fields
-│   │   │   ├── TamperingViewer.tsx    Bounding-box overlay + alerts
-│   │   │   └── FaceMatchCard.tsx      Document photo vs. live photo
-│   │   └── ui/
-│   │       ├── Button.tsx
-│   │       └── Card.tsx
-│   ├── lib/
-│   │   ├── types.ts            Mirrors Schema.md exactly
-│   │   └── mockApi.ts          setTimeout-based stand-in for the AI backend
-│   └── store/
-│       └── useScanStore.ts     Zustand store for the current scan session
-├── tailwind.config.ts          Color/type tokens from Design.md
-└── package.json
+│   │   ├── domain/          # Screening-specific UI
+│   │   ├── layout/          # Navigation/layout components
+│   │   └── ui/              # Shared UI primitives
+│   ├── lib/                 # Types + browser-side mock API adapter
+│   └── store/               # Zustand scan-session state
+├── next-env.d.ts
+├── next.config.mjs
+├── package.json
+├── package-lock.json
+├── postcss.config.mjs
+└── tailwind.config.ts
 ```
 
-## Swapping the mock for the real backend
+## Architecture note
 
-`src/lib/mockApi.ts` exports a single `screenDocument(request, onStep)`
-function returning a `Promise<ScreeningResponse>`. Replace its body with a
-`fetch` to `${process.env.NEXT_PUBLIC_API_URL}/screen`; no component needs to
-change because every consumer only depends on the `ScreeningResponse` type in
-`src/lib/types.ts`.
-
-## Notes
-
-- `shadcn/ui` was not vendored in so this scaffold has no extra install step;
-  `src/components/ui/Button.tsx` and `Card.tsx` are minimal stand-ins with the
-  same prop shape and can be swapped for generated shadcn components directly.
-- The webcam capture only ever sends a single still frame, never a video
-  stream, per the local-processing rule in `TechSpec.md`.
-- `useScanStore.resetSession()` clears every PII-bearing field (images, OCR
-  data) — call it whenever a session closes, per `Rules.md`.
+`frontend/src/lib/mockApi.ts` is a frontend test adapter, not the backend. It currently simulates the future Python/FastAPI inference service so the UI can run independently. Replace its implementation with a `fetch` to `${process.env.NEXT_PUBLIC_API_URL}/screen` when the backend is available.
