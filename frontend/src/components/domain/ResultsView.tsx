@@ -32,14 +32,14 @@ export function ResultsView({
             <h2 className="mt-1 text-2xl font-semibold text-slate-100">{result.recommendation}</h2>
             <p className="mt-1 font-mono text-xs text-slate-500">{result.transactionId}</p>
           </div>
-          <RiskGauge score={result.overallRiskScore} />
+          <RiskGauge score={result.overallRiskScore} recommendation={result.recommendation} />
         </div>
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeading title="OCR extraction" description="Fields extracted from the document image" />
-          <OcrTable data={result.module1_OCR} />
+          <OcrTable fields={result.module1_OCR} />
         </Card>
         <Card>
           <CardHeading title="Face match" description="Document portrait compared with live capture" />
@@ -63,7 +63,11 @@ export function ResultsView({
         </Card>
         <Card>
           <CardHeading title="Tampering analysis" description="Anomalies identified by the screening model" />
-          <TamperingViewer imageUrl={documentImage} data={result.module3_Tampering} />
+          <TamperingViewer
+            documentImage={documentImage}
+            validation={result.module2_Validation}
+            tampering={result.module3_Tampering}
+          />
         </Card>
       </div>
 
