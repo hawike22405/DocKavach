@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeading } from "@/components/ui/Card";
@@ -54,6 +55,9 @@ export default function RegisterPage() {
           {error && <p role="alert" className="text-sm text-danger">{error}</p>}
           <Button type="submit" variant="primary" className="w-full" disabled={loading}>{loading ? "Creating…" : "Create account"}</Button>
         </form>
+        <p className="mt-4 text-center text-sm text-slate-500">
+          Already registered? <Link href="/login" className="text-cyan-300 hover:text-cyan-200">Sign in</Link>
+        </p>
       </Card>
     </div>
   );
