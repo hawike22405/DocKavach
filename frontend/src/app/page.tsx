@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { DocumentUploader } from "@/components/domain/DocumentUploader";
@@ -8,7 +8,8 @@ import { FaceCapture } from "@/components/domain/FaceCapture";
 import { ProcessingStepper } from "@/components/domain/ProcessingStepper";
 import { ResultsView } from "@/components/domain/ResultsView";
 import { useScanStore } from "@/store/useScanStore";
-import { screenDocument } from "@/lib/mockApi";
+import { recordDecision, screenDocument } from "@/lib/api";
+import type { OfficerDecision } from "@/lib/types";
 import { ScanLine } from "lucide-react";
 
 export default function DashboardPage() {
@@ -27,21 +28,52 @@ export default function DashboardPage() {
     setOfficerDecision,
     resetSession,
   } = useScanStore();
+  const [error, setError] = useState<string | null>(null);
+  const [savingDecision, setSavingDecision] = useState(false);
 
   const canRunScreening = Boolean(documentImage && liveFaceImage);
 
-  const runScreening = () => {
-    if (!documentImage) return;
+  const runScreening = async () => {
+    if (!documentImage || !liveFaceImage) return;
+    setError(null);
     startProcessing();
-    screenDocument(
-      { documentImageBase64: documentImage, documentType: "PASSPORT", liveFaceBase64: liveFaceImage ?? undefined },
-      (step) => setProcessingStep(step)
-    ).then((response) => setResult(response));
+
+    try {
+      const response = await screenDocument(
+        {
+          documentImageBase64: documentImage,
+          documentType: "PASSPORT",
+          liveFaceBase64: liveFaceImage,
+        },
+        (step) => setProcessingStep(step)
+      );
+      setProcessingStep(3);
+      setResult(response);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Screening request failed");
+      resetSession();
+    }
+  };
+
+  const handleDecision = async (decision: OfficerDecision) => {
+    if (!result || savingDecision) return;
+    setSavingDecision(true);
+    setError(null);
+    try {
+      await recordDecision(result.transactionId, decision);
+      setOfficerDecision(decision);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save officer decision");
+    } finally {
+      setSavingDecision(false);
+    }
   };
 
   useEffect(() => {
     return () => {
-      if (documentImage) URL.revokeObjectURL(documentImage);
+      // DocumentUploader creates an object URL for the uploaded document.
+      // Do not revoke the live-face data URL returned by react-webcam.
+      if (documentImage?.startsWith("blob:")) URL.revokeObjectURL(documentImage);
     };
   }, [documentImage]);
 
@@ -58,6 +90,12 @@ export default function DashboardPage() {
           </Button>
         )}
       </header>
+
+      {error && (
+        <div role="alert" className="mb-4 rounded-md border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+          {error}
+        </div>
+      )}
 
       {stage === "capture" && (
         <div className="space-y-4">
@@ -91,8 +129,9 @@ export default function DashboardPage() {
           documentImage={documentImage}
           liveFaceImage={liveFaceImage}
           decision={officerDecision}
-          onDecision={setOfficerDecision}
+          onDecision={handleDecision}
           onNewScan={resetSession}
+          decisionDisabled={savingDecision}
         />
       )}
     </div>
