@@ -46,6 +46,24 @@ function getToken() {
   return localStorage.getItem("token");
 }
 
+async function imageSourceToDataUrl(source: string) {
+  if (!source.startsWith("blob:")) return source;
+
+  const response = await fetch(source);
+  if (!response.ok) throw new Error("Could not read the uploaded document image");
+  const blob = await response.blob();
+
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") resolve(reader.result);
+      else reject(new Error("Could not convert the uploaded image to base64"));
+    };
+    reader.onerror = () => reject(new Error("Could not read the uploaded image"));
+    reader.readAsDataURL(blob);
+  });
+}
+
 async function request<T>(endpoint: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers = new Headers(init.headers);
@@ -115,9 +133,17 @@ export async function screenDocument(screenRequest: ScreeningRequest, onStep?: (
   ];
 
   try {
+    const normalizedRequest: ScreeningRequest = {
+      ...screenRequest,
+      documentImageBase64: await imageSourceToDataUrl(screenRequest.documentImageBase64),
+      liveFaceBase64: screenRequest.liveFaceBase64
+        ? await imageSourceToDataUrl(screenRequest.liveFaceBase64)
+        : undefined,
+    };
+
     return await request<ScreeningResponse>("/screen", {
       method: "POST",
-      body: JSON.stringify(screenRequest),
+      body: JSON.stringify(normalizedRequest),
     });
   } finally {
     timers.forEach((timer) => window.clearTimeout(timer));
