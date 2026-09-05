@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { DocumentUploader } from "@/components/domain/DocumentUploader";
@@ -8,11 +9,12 @@ import { FaceCapture } from "@/components/domain/FaceCapture";
 import { ProcessingStepper } from "@/components/domain/ProcessingStepper";
 import { ResultsView } from "@/components/domain/ResultsView";
 import { useScanStore } from "@/store/useScanStore";
-import { recordDecision, screenDocument } from "@/lib/api";
+import { hasToken, recordDecision, screenDocument } from "@/lib/api";
 import type { OfficerDecision } from "@/lib/types";
 import { ScanLine } from "lucide-react";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const {
     stage,
     documentImage,
@@ -28,16 +30,21 @@ export default function DashboardPage() {
     setOfficerDecision,
     resetSession,
   } = useScanStore();
+  const [authorized, setAuthorized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savingDecision, setSavingDecision] = useState(false);
 
   const canRunScreening = Boolean(documentImage && liveFaceImage);
 
+  useEffect(() => {
+    if (hasToken()) setAuthorized(true);
+    else router.replace("/login");
+  }, [router]);
+
   const runScreening = async () => {
     if (!documentImage || !liveFaceImage) return;
     setError(null);
     startProcessing();
-
     try {
       const response = await screenDocument(
         {
@@ -45,7 +52,7 @@ export default function DashboardPage() {
           documentType: "PASSPORT",
           liveFaceBase64: liveFaceImage,
         },
-        (step) => setProcessingStep(step)
+        setProcessingStep
       );
       setProcessingStep(3);
       setResult(response);
@@ -69,13 +76,11 @@ export default function DashboardPage() {
     }
   };
 
-  useEffect(() => {
-    return () => {
-      // DocumentUploader creates an object URL for the uploaded document.
-      // Do not revoke the live-face data URL returned by react-webcam.
-      if (documentImage?.startsWith("blob:")) URL.revokeObjectURL(documentImage);
-    };
+  useEffect(() => () => {
+    if (documentImage?.startsWith("blob:")) URL.revokeObjectURL(documentImage);
   }, [documentImage]);
+
+  if (!authorized) return <div className="mx-auto max-w-5xl px-6 py-8 text-sm text-slate-500">Checking officer session…</div>;
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
@@ -84,18 +89,10 @@ export default function DashboardPage() {
           <h1 className="text-lg font-semibold text-slate-100">New scan</h1>
           <p className="text-sm text-slate-400">Upload a document and capture a live photo to begin screening.</p>
         </div>
-        {stage !== "capture" && (
-          <Button variant="ghost" onClick={resetSession}>
-            Cancel scan
-          </Button>
-        )}
+        {stage !== "capture" && <Button variant="ghost" onClick={resetSession}>Cancel scan</Button>}
       </header>
 
-      {error && (
-        <div role="alert" className="mb-4 rounded-md border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-          {error}
-        </div>
-      )}
+      {error && <div role="alert" className="mb-4 rounded-md border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>}
 
       {stage === "capture" && (
         <div className="space-y-4">
@@ -117,11 +114,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {stage === "processing" && (
-        <Card>
-          <ProcessingStepper currentStepIndex={processingStepIndex} />
-        </Card>
-      )}
+      {stage === "processing" && <Card><ProcessingStepper currentStepIndex={processingStepIndex} /></Card>}
 
       {stage === "results" && result && (
         <ResultsView
