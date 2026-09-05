@@ -1,6 +1,6 @@
 "use client";
 
-import type { ScreeningResponse } from "@/lib/types";
+import type { ScreeningResponse, OfficerDecision } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { RiskGauge } from "@/components/domain/RiskGauge";
@@ -15,13 +15,15 @@ export function ResultsView({
   decision,
   onDecision,
   onNewScan,
+  decisionDisabled = false,
 }: {
   result: ScreeningResponse;
   documentImage: string | null;
   liveFaceImage: string | null;
-  decision: "APPROVE" | "FLAG" | "REJECT" | null;
-  onDecision: (decision: "APPROVE" | "FLAG" | "REJECT") => void;
+  decision: OfficerDecision | null;
+  onDecision: (decision: OfficerDecision) => void;
   onNewScan: () => void;
+  decisionDisabled?: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -56,9 +58,13 @@ export function ResultsView({
             <p className={result.module2_Validation.isValid ? "text-sm text-success" : "text-sm text-danger"}>
               {result.module2_Validation.isValid ? "Document passed validation" : "Validation failed"}
             </p>
-            {result.module2_Validation.errors.map((error) => (
-              <p key={error} className="text-sm text-slate-400">{error}</p>
-            ))}
+            {result.module2_Validation.errors.length === 0 ? (
+              <p className="text-sm text-slate-500">No validation errors reported.</p>
+            ) : (
+              result.module2_Validation.errors.map((error) => (
+                <p key={error} className="text-sm text-slate-400">{error}</p>
+              ))
+            )}
           </div>
         </Card>
         <Card>
@@ -75,14 +81,20 @@ export function ResultsView({
         <CardHeading title="Officer decision" description="Record the final disposition for this screening" />
         <div className="flex flex-wrap items-center gap-2">
           {(["APPROVE", "FLAG", "REJECT"] as const).map((option) => (
-            <Button key={option} variant={decision === option ? "primary" : "ghost"} onClick={() => onDecision(option)}>
+            <Button
+              key={option}
+              variant={decision === option ? "primary" : "ghost"}
+              onClick={() => onDecision(option)}
+              disabled={decisionDisabled}
+            >
               {option}
             </Button>
           ))}
           <div className="ml-auto">
-            <Button variant="ghost" onClick={onNewScan}>New scan</Button>
+            <Button variant="ghost" onClick={onNewScan} disabled={decisionDisabled}>New scan</Button>
           </div>
         </div>
+        {decision && <p className="mt-3 text-xs text-slate-500">Recorded decision: {decision}</p>}
       </Card>
     </div>
   );
