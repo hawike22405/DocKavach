@@ -4,7 +4,7 @@ const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/
 
 export type ApiResponse<T> = {
   success: boolean;
-  data: T;
+  data?: T;
   message?: string;
 };
 
@@ -72,7 +72,8 @@ async function request<T>(endpoint: string, init: RequestInit = {}): Promise<T> 
     throw new Error(json?.message ?? `Request failed (${response.status})`);
   }
 
-  return json.data;
+  if (!("data" in json)) return null as T;
+  return json.data as T;
 }
 
 export async function register(name: string, email: string, password: string, badgeId = "") {
@@ -105,26 +106,22 @@ export function hasToken() {
   return Boolean(getToken());
 }
 
-export async function screenDocument(request: ScreeningRequest, onStep?: (stepIndex: number) => void) {
-  // The backend performs all four modules synchronously. Keep the UI stepper
-  // visible by advancing the four display states while the request is running.
+export async function screenDocument(screenRequest: ScreeningRequest, onStep?: (stepIndex: number) => void) {
   onStep?.(0);
-  const progress = [1, 2, 3].map((step, index) =>
-    window.setTimeout(() => onStep?.(step), 500 + index * 900)
-  );
+  const timers: ReturnType<typeof window.setTimeout>[] = [
+    window.setTimeout(() => onStep?.(1), 500),
+    window.setTimeout(() => onStep?.(2), 1400),
+    window.setTimeout(() => onStep?.(3), 2300),
+  ];
 
   try {
-    return await requestApi<ScreeningResponse>("/screen", {
+    return await request<ScreeningResponse>("/screen", {
       method: "POST",
-      body: JSON.stringify(request),
+      body: JSON.stringify(screenRequest),
     });
   } finally {
-    progress.forEach(window.clearTimeout);
+    timers.forEach((timer) => window.clearTimeout(timer));
   }
-}
-
-async function requestApi<T>(endpoint: string, init: RequestInit) {
-  return request<T>(endpoint, init);
 }
 
 export async function getHistory(params: {
