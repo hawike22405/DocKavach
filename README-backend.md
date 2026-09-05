@@ -1,8 +1,6 @@
 # DocKavach Backend
 
-Real implementation of the 4-module pipeline your frontend's `mockApi.ts`
-currently simulates. Same request/response shape as `types.ts` — so you can
-swap the mock call for a real fetch with no frontend type changes.
+Real implementation of the 4-module pipeline your frontend uses. The backend stores officers, screenings, decisions, and settings in MongoDB.
 
 ## 1. System dependency (OCR engine)
 Tesseract must be installed on the OS (pytesseract is just a Python wrapper).
@@ -15,9 +13,22 @@ sudo apt update && sudo apt install -y tesseract-ocr
 # then add the install folder to PATH
 ```
 
-## 2. Setup
+## 2. MongoDB Atlas setup (recommended)
+
+DocKavach uses the `MONGO_URI` environment variable, so no MongoDB server needs to run locally. `db.py` creates the required indexes automatically after connecting. The application expects these collections in the configured database:
+
+- `officers`
+- `screenings`
+- `settings`
+
+The Atlas URL in the MongoDB console is **not** the connection string. In Atlas, open your cluster and choose **Connect → Drivers**, select **Python**, then copy the `mongodb+srv://...` connection string. Replace `<username>` and `<password>` with a database user that has read/write access to the database.
+
+In Atlas, also add the IP address of the computer running the backend under **Security → Network Access**. For local development you can allow your current IP; avoid `0.0.0.0/0` unless you understand the security implications.
+
+## 3. Backend setup
+
 ```bash
-cd DocKavach-backend
+cd DocKavach
 python -m venv venv
 venv\Scripts\activate        # Windows
 # source venv/bin/activate   # Linux/Mac
@@ -26,76 +37,55 @@ pip install -r requirements.txt
 copy .env.example .env       # Windows
 # cp .env.example .env       # Linux/Mac
 ```
-Edit `.env` → set `MONGO_URI` (Atlas free cluster or local) and `JWT_SECRET`.
 
-## 3. Verify DB, then run
-```bash
-python db.py        # must print [OK] Connected to MongoDB
-python app.py        # serves on http://localhost:5000
+Edit `.env` and put your Atlas connection string in `MONGO_URI`. Keep `.env` private; never commit it.
+
+Example:
+
+```env
+MONGO_URI=mongodb+srv://<username>:<password>@<cluster-host>/dockavach_db?retryWrites=true&w=majority
+DB_NAME=dockavach_db
+JWT_SECRET=replace_with_a_long_random_secret
+JWT_EXP_HOURS=24
+PORT=5000
 ```
 
-## 4. Endpoints
+If you specifically want to use the existing `sample_mflix` database shown in Atlas, set `DB_NAME=sample_mflix`. DocKavach will then create/use its own `officers`, `screenings`, and `settings` collections in that database. It does **not** use the `SIH` collection for its application records unless the code is explicitly changed to do so.
+
+## 4. Verify Atlas, then run
+
+```bash
+python db.py        # must print [OK] Connected to MongoDB
+python app.py       # serves on http://localhost:5000
+```
+
+A successful `db.py` check confirms that the backend is using Atlas rather than a local MongoDB process.
+
+## 5. Endpoints
 
 | Method | Route | Auth | Purpose |
 |---|---|---|---|
 | POST | `/api/auth/register` | no | create officer account |
 | POST | `/api/auth/login` | no | returns JWT |
 | GET | `/api/auth/me` | yes | current officer |
-| POST | `/api/screen` | yes | **run the full pipeline** |
+| POST | `/api/screen` | yes | run the full pipeline |
 | GET | `/api/history?page=&limit=&recommendation=&mine=` | yes | audit log |
 | GET | `/api/history/<transactionId>` | yes | one record |
-| POST | `/api/history/<transactionId>/decision` | yes | body `{"decision":"APPROVE"\|"FLAG"\|"REJECT"}` |
+| POST | `/api/history/<transactionId>/decision` | yes | save officer decision |
 | GET/PUT | `/api/settings` | yes | station/checkpoint config |
 
-### `/api/screen` request body
-```json
-{
-  "documentImageBase64": "<base64 or data URL>",
-  "documentType": "PASSPORT" | "VISA" | "NATIONAL_ID",
-  "liveFaceBase64": "<base64 or data URL, optional>"
-}
+## 6. Frontend
+
+The frontend is configured to call the backend through:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
 ```
-Response matches `ScreeningResponse` in `types.ts` exactly: `transactionId`,
-`timestamp`, `overallRiskScore`, `recommendation`, `module1_OCR`,
-`module2_Validation`, `module3_Tampering`, `module4_FaceMatch`.
 
-## 5. How each module actually works (so you can explain it to judges)
-- **Module 1 (OCR)**: Tesseract OCR → for passports, locates and parses the
-  MRZ per ICAO 9303 (real checksum validation on doc number/DOB/expiry).
-  For visa/national ID (no standard MRZ), heuristic regex extraction.
-- **Module 2 (Validation)**: expiry date check, DOB plausibility, MRZ
-  checksum errors surfaced here.
-- **Module 3 (Tampering)**: Error Level Analysis (ELA) — recompresses the
-  image and diffs it against the original; edited regions compress
-  differently and light up. Classifies anomalies as PHOTO_REPLACEMENT /
-  FONT_MISMATCH / METADATA based on location.
-- **Module 4 (Face match)**: OpenCV Haar cascade face detection on both
-  document photo and live selfie, histogram-correlation similarity score.
-- **Risk score**: weighted combination of the above → APPROVE/REVIEW/REJECT.
-  Thresholds are in `services/risk_service.py` — tune them if your demo
-  needs different sensitivity.
+This is the URL of the Flask API, not MongoDB. MongoDB credentials belong only in the backend `.env`; they must never be placed in `NEXT_PUBLIC_*` variables because those variables are exposed to the browser.
 
-## 6. Frontend integration (2 changes only)
-In your friend's frontend, replace the mock call:
-```ts
-// before: import { screenDocument } from "@/lib/mockApi"
-// after:
-async function screenDocument(req: ScreeningRequest): Promise<ScreeningResponse> {
-  const token = localStorage.getItem("token");
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/screen`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(req),
-  });
-  const json = await res.json();
-  if (!json.success) throw new Error(json.message);
-  return json.data;
-}
-```
-Set `NEXT_PUBLIC_API_URL=http://localhost:5000/api` in the frontend's `.env.local`.
-
-Wire login the same way against `/api/auth/login`, store the returned token,
-then history page → `GET /api/history`, settings page → `GET/PUT /api/settings`.
+The frontend sends the JWT as a Bearer token and sends uploaded/captured images to `/api/screen` as data URLs/base64. History, officer decisions, authentication, and settings use the corresponding backend endpoints.
 
 ## 7. Before pushing to git
-`.env` is already in `.gitignore` — don't remove it.
+
+`.env` is already in `.gitignore` — don't remove it or commit Atlas credentials.
