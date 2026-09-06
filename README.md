@@ -4,7 +4,7 @@
 
 DocKavach is a full-stack document-screening application that combines a **Next.js/TypeScript frontend**, a **Flask/Python backend**, **MongoDB Atlas persistence**, OCR, MRZ parsing, document validation, image-tampering analysis, face detection/matching, risk scoring, officer decisions, and screening history.
 
-The current repository is no longer frontend-only: the Python backend and MongoDB integration are implemented and the frontend API client is wired to the backend.
+
 
 ---
 
@@ -43,13 +43,13 @@ The implementation is suitable for a **hackathon/demo environment**. Several com
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
-│                     DocKavach Frontend                      │
-│                  Next.js + React + TypeScript               │
+│                     DocKavach Frontend                       │
+│                  Next.js + React + TypeScript                │
 │                                                              │
 │  Login/Register → Document Upload + Webcam → Processing      │
-│                  → Screening Results → Decision             │
+│                  → Screening Results → Decision              │
 │                                                              │
-│  Zustand scan state · Tailwind CSS · Framer Motion · UI     │
+│  Zustand scan state · Tailwind CSS · Framer Motion · UI      │
 └──────────────────────────────┬───────────────────────────────┘
                                │ HTTPS/HTTP JSON + Bearer JWT
                                ▼
@@ -57,10 +57,10 @@ The implementation is suitable for a **hackathon/demo environment**. Several com
 │                      Flask REST API                          │
 │                                                              │
 │  /api/auth/*     Authentication & officer identity           │
-│  /api/screen     Document screening pipeline                │
-│  /api/history/*  Screening/audit history                    │
-│  /api/settings   Officer station/checkpoint configuration   │
-│  /api/health     Health check                               │
+│  /api/screen     Document screening pipeline                 │
+│  /api/history/*  Screening/audit history                     │
+│  /api/settings   Officer station/checkpoint configuration    │
+│  /api/health     Health check                                │
 └───────────────┬───────────────────────────────┬──────────────┘
                 │                               │
                 ▼                               ▼
