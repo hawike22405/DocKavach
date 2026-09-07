@@ -1,5 +1,7 @@
-from flask import Flask, request
+from flask import Flask
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from config import Config
 from db import test_connection
 from routes.auth import auth_bp
@@ -12,14 +14,16 @@ def create_app():
     app = Flask(__name__)
     app.config["MAX_CONTENT_LENGTH"] = Config.MAX_CONTENT_LENGTH
 
-    # Allow only the configured frontend origin. Set FRONTEND_ORIGIN to the
-    # deployed frontend URL; localhost remains the development default.
     CORS(
         app,
-        resources={r"/api/*": {"origins": Config.FRONTEND_ORIGIN}},
+        resources={r"/api/*": {"origins": [Config.FRONTEND_ORIGIN]}},
         methods=["GET", "POST", "PUT", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"],
     )
+
+    limiter = Limiter(key_func=get_remote_address, default_limits=["120 per minute"], storage_uri="memory://")
+    limiter.init_app(app)
+    app.extensions["limiter"] = limiter
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(screening_bp)
@@ -37,6 +41,10 @@ def create_app():
     @app.errorhandler(400)
     def bad_request(e):
         return {"success": False, "message": "Malformed request"}, 400
+
+    @app.errorhandler(429)
+    def rate_limited(e):
+        return {"success": False, "message": "Too many requests"}, 429
 
     @app.errorhandler(Exception)
     def unhandled_error(e):
