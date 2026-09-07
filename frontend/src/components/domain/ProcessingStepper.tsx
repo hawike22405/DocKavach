@@ -7,7 +7,7 @@ export function ProcessingStepper({ currentStepIndex }: { currentStepIndex: numb
     <section className="relative overflow-hidden rounded-2xl border border-cyan-400/15 bg-slate-950/45 p-8 shadow-[0_20px_60px_rgba(2,12,27,0.35)] backdrop-blur-md" aria-live="polite" aria-busy="true">
       <div className="watermark-seal" aria-hidden="true">✓</div>
       <div className="relative flex flex-col items-center text-center">
-        <div className="security-pulse mb-5 grid h-16 w-16 place-items-center rounded-full border border-cyan-400/20 bg-cyan-400/5">
+        <div className="security-pulse mb-5 grid h-24 w-24 place-items-center rounded-full border border-cyan-400/20 bg-cyan-400/5">
           <div className="scan-loader" aria-hidden="true" />
         </div>
         <span className="gov-eyebrow">Secure screening pipeline</span>
