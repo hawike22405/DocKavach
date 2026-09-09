@@ -10,18 +10,27 @@ import { ProcessingStepper } from "@/components/domain/ProcessingStepper";
 import { ResultsView } from "@/components/domain/ResultsView";
 import { useScanStore } from "@/store/useScanStore";
 import { hasToken, recordDecision, screenDocument } from "@/lib/api";
-import type { OfficerDecision } from "@/lib/types";
+import type { DocumentType, OfficerDecision } from "@/lib/types";
 import { ScanLine, ShieldCheck } from "lucide-react";
+import clsx from "clsx";
+
+const DOCUMENT_TYPES: { value: DocumentType; label: string }[] = [
+  { value: "PASSPORT", label: "Passport" },
+  { value: "VISA", label: "Visa" },
+  { value: "NATIONAL_ID", label: "National ID" },
+];
 
 export default function DashboardPage() {
   const router = useRouter();
   const {
     stage,
+    documentType,
     documentImage,
     liveFaceImage,
     processingStepIndex,
     result,
     officerDecision,
+    setDocumentType,
     setDocumentImage,
     setLiveFaceImage,
     startProcessing,
@@ -49,7 +58,7 @@ export default function DashboardPage() {
       const response = await screenDocument(
         {
           documentImageBase64: documentImage,
-          documentType: "PASSPORT",
+          documentType,
           liveFaceBase64: liveFaceImage,
         },
         setProcessingStep
@@ -119,9 +128,40 @@ export default function DashboardPage() {
 
       {stage === "capture" && (
         <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 backdrop-blur-md">
+            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Document type</span>
+            <div className="flex gap-1.5" role="radiogroup" aria-label="Document type">
+              {DOCUMENT_TYPES.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={documentType === option.value}
+                  onClick={() => setDocumentType(option.value)}
+                  className={clsx(
+                    "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                    documentType === option.value
+                      ? "border-accent bg-accent/15 text-accent"
+                      : "border-white/10 bg-white/[0.03] text-slate-400 hover:border-slate-500"
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <CardHeading title="01 · Document image" description="Passport, visa, or national identity page" />
+              <CardHeading
+                title="01 · Document image"
+                description={
+                  documentType === "PASSPORT"
+                    ? "Passport photo page, MRZ band fully visible"
+                    : documentType === "VISA"
+                    ? "Visa page or sticker, all printed fields visible"
+                    : "National identity card, front side"
+                }
+              />
               <DocumentUploader imageUrl={documentImage} onChange={setDocumentImage} />
             </Card>
             <Card>
