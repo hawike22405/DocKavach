@@ -5,6 +5,8 @@ from middleware.auth_required import auth_required
 import datetime
 
 history_bp = Blueprint("history", __name__, url_prefix="/api/history")
+VALID_RECOMMENDATIONS = {"APPROVE", "REVIEW", "REJECT"}
+VALID_DECISIONS = {"APPROVE", "FLAG", "REJECT"}
 
 
 def _serialize(doc):
@@ -12,22 +14,39 @@ def _serialize(doc):
     return doc
 
 
+def _positive_int_arg(name: str, default: int, minimum: int, maximum: int):
+    raw = request.args.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        raise ValueError(f"{name} must be an integer")
+    if not minimum <= value <= maximum:
+        raise ValueError(f"{name} must be between {minimum} and {maximum}")
+    return value
+
+
 @history_bp.route("", methods=["GET"])
 @auth_required
 def list_history():
-    db = get_db()
+    try:
+        page = _positive_int_arg("page", 1, 1, 100000)
+        limit = _positive_int_arg("limit", 20, 1, 100)
+    except ValueError as exc:
+        return fail(str(exc), 422)
 
-    page = max(1, int(request.args.get("page", 1)))
-    limit = min(100, max(1, int(request.args.get("limit", 20))))
-    recommendation = request.args.get("recommendation")  # optional filter: APPROVE/REVIEW/REJECT
-    mine_only = request.args.get("mine") == "true"
+    recommendation = request.args.get("recommendation")
+    if recommendation and recommendation not in VALID_RECOMMENDATIONS:
+        return fail("recommendation must be APPROVE, REVIEW, or REJECT", 422)
 
-    query = {}
+    # History is officer-scoped by default. The previous implementation
+    # exposed all screening records to any authenticated officer.
+    query = {"officerId": g.user_id}
     if recommendation:
         query["recommendation"] = recommendation
-    if mine_only:
-        query["officerId"] = g.user_id
 
+    db = get_db()
     cursor = (
         db.screenings.find(query)
         .sort("timestamp", -1)
@@ -44,7 +63,7 @@ def list_history():
 @auth_required
 def get_record(transaction_id):
     db = get_db()
-    record = db.screenings.find_one({"transactionId": transaction_id})
+    record = db.screenings.find_one({"transactionId": transaction_id, "officerId": g.user_id})
     if not record:
         return fail("Transaction not found", 404)
     return ok(_serialize(record))
@@ -55,16 +74,16 @@ def get_record(transaction_id):
 def set_decision(transaction_id):
     body = request.get_json(silent=True) or {}
     decision = body.get("decision")
-    if decision not in ("APPROVE", "FLAG", "REJECT"):
+    if decision not in VALID_DECISIONS:
         return fail("decision must be APPROVE, FLAG, or REJECT", 422)
 
     db = get_db()
     result = db.screenings.update_one(
-        {"transactionId": transaction_id},
+        {"transactionId": transaction_id, "officerId": g.user_id},
         {"$set": {
             "officerDecision": decision,
             "decidedBy": g.user_id,
-            "decisionTimestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "decisionTimestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }},
     )
     if result.matched_count == 0:

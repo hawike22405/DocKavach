@@ -126,7 +126,7 @@ export function hasToken() {
 
 export async function screenDocument(screenRequest: ScreeningRequest, onStep?: (stepIndex: number) => void) {
   onStep?.(0);
-  const timers: ReturnType<typeof window.setTimeout>[] = [
+  const timers: number[] = [
     window.setTimeout(() => onStep?.(1), 500),
     window.setTimeout(() => onStep?.(2), 1400),
     window.setTimeout(() => onStep?.(3), 2300),
