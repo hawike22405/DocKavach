@@ -27,19 +27,35 @@ def _checksum(data: str) -> int:
     return total % 10
 
 
+def _is_mrz_candidate(cleaned: str) -> bool:
+    return len(cleaned) >= 30 and cleaned.count("<") >= 2
+
+
 def find_mrz_lines(raw_text: str):
-    """Scan OCR output for two 44-ish char lines that look like MRZ."""
-    candidates = []
-    for line in raw_text.splitlines():
-        cleaned = re.sub(r"[^A-Z0-9<]", "", line.upper())
-        if len(cleaned) >= 30 and cleaned.count("<") >= 2:
-            candidates.append(cleaned)
+    """Scan OCR output for two 44-ish char lines that look like MRZ.
+
+    Prefers two *consecutive* OCR lines that both look MRZ-shaped, since
+    that's how a real MRZ actually appears. Falling back to "the two longest
+    candidate lines anywhere in the text" (the old behavior) could stitch
+    together two unrelated lines from a non-passport document or a noisy OCR
+    pass into something that superficially parsed as an MRZ, producing bogus
+    name/DOB/document-number fields.
+    """
+    cleaned_lines = [re.sub(r"[^A-Z0-9<]", "", line.upper()) for line in raw_text.splitlines()]
+
+    for i in range(len(cleaned_lines) - 1):
+        a, b = cleaned_lines[i], cleaned_lines[i + 1]
+        if _is_mrz_candidate(a) and _is_mrz_candidate(b):
+            return (a + "<" * 44)[:44], (b + "<" * 44)[:44]
+
+    # No adjacent pair found — fall back to the two longest candidates
+    # anywhere in the text (better than nothing, e.g. OCR dropped a blank
+    # line between them).
+    candidates = [c for c in cleaned_lines if _is_mrz_candidate(c)]
     if len(candidates) < 2:
         return None
-    # Take the two longest candidate lines, in original order
     candidates = sorted(candidates, key=len, reverse=True)[:2]
     line1, line2 = candidates
-    # normalise to 44 chars (pad or trim) so fixed-offset parsing is safe
     line1 = (line1 + "<" * 44)[:44]
     line2 = (line2 + "<" * 44)[:44]
     return line1, line2
