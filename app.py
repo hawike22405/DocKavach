@@ -8,7 +8,14 @@ from routes.auth import auth_bp
 from routes.screening import screening_bp
 from routes.history import history_bp
 from routes.settings import settings_bp
-
+import pytesseract
+import sys
+def check_tesseract():
+    try:
+        pytesseract.get_tesseract_version()
+    except EnvironmentError as e:
+        print(f"ERROR: Tesseract OCR is not installed or not found in PATH: {e}", file=sys.stderr)
+        sys.exit(1)
 
 def create_app():
     app = Flask(__name__)
@@ -55,6 +62,9 @@ def create_app():
 
 
 if __name__ == "__main__":
-    test_connection()
+    check_tesseract()
+    if not test_connection():
+        print("ERROR: Couldn't connect to server", file=sys.stderr)
+        sys.exit(1)
     app = create_app()
     app.run(host=Config.HOST, port=Config.PORT, debug=Config.DEBUG)

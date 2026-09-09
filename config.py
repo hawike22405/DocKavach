@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
+import sys
 
 
 def _env_int(name: str, default: int, minimum: int, maximum: int) -> int:
@@ -33,3 +34,6 @@ if not Config.JWT_SECRET or len(Config.JWT_SECRET) < 32:
     raise RuntimeError("JWT_SECRET missing or too short; use at least 32 random characters")
 if not Config.FRONTEND_ORIGIN.startswith(("http://", "https://")):
     raise RuntimeError("FRONTEND_ORIGIN must be an absolute http(s) URL")
+
+if Config.DEBUG:
+    print("WARNING: FLASK_DEBUG is enabled (debug mode). Do not use in production.", file=sys.stderr)

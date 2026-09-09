@@ -5,6 +5,7 @@ from utils.hash import hash_password, verify_password
 from utils.jwt_handler import create_token
 from utils.response import ok, fail
 from middleware.auth_required import auth_required
+from pymongo.errors import DuplicateKeyError
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
@@ -42,7 +43,10 @@ def register():
         "password": hash_password(password),
         "badgeId": badge_id,
     }
-    result = db.officers.insert_one(officer_doc)
+    try:
+        result = db.officers.insert_one(officer_doc)
+    except DuplicateKeyError:
+        return fail("Officer already registered", 409)
 
     token = create_token(str(result.inserted_id), {"email": email})
     return ok(
