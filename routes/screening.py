@@ -17,6 +17,7 @@ from services.tampering_service import analyze_tampering
 from services.facematch_service import match_faces
 from services.risk_service import compute_risk
 from services.activity_log import log_activity
+from pymongo.errors import DuplicateKeyError
 
 screening_bp = Blueprint("screening", __name__, url_prefix="/api")
 
@@ -83,13 +84,27 @@ def screen_document():
     }
 
     db = get_db()
-    db.screenings.insert_one({
-        **response_payload,
-        "documentType": document_type,
-        "officerId": g.user_id,
-        "officerDecision": None,
-        "decisionTimestamp": None,
-    })
+    try:
+        db.screenings.insert_one({
+            **response_payload,
+            "documentType": document_type,
+            "officerId": g.user_id,
+            "officerDecision": None,
+            "decisionTimestamp": None,
+        })
+    except DuplicateKeyError:
+        # Regenerate transactionId and timestamp on collision
+        transaction_id = f"TXN-{int(time.time() * 1000):x}".upper()
+        timestamp = datetime.datetime.utcnow().isoformat() + "Z"
+        response_payload["transactionId"] = transaction_id
+        response_payload["timestamp"] = timestamp
+        db.screenings.insert_one({
+            **response_payload,
+            "documentType": document_type,
+            "officerId": g.user_id,
+            "officerDecision": None,
+            "decisionTimestamp": None,
+        })
 
     log_activity(
         "SCREENING",

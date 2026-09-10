@@ -46,23 +46,34 @@ def create_app():
     def health():
         return {"success": True, "message": "DocKavach backend alive"}
 
+    @app.errorhandler(400)
+    def bad_request(e):
+        return {"success": False, "message": "Malformed request"}, 400
+
     @app.errorhandler(404)
     def not_found(e):
         return {"success": False, "message": "Route not found"}, 404
 
     @app.errorhandler(413)
     def too_large(e):
-        return {"success": False, "message": "Image payload too large"}, 413
+        return {"success": False, "message": "Request payload too large"}, 413
 
     @app.errorhandler(429)
     def rate_limited(e):
         return {"success": False, "message": "Too many requests, slow down"}, 429
+
+    @app.errorhandler(Exception)
+    def unhandled_error(e):
+        app.logger.exception("Unhandled API error")
+        return {"success": False, "message": "Internal server error"}, 500
 
     return app
 
 
 if __name__ == "__main__":
     check_tesseract()
-    test_connection()
+    if not test_connection():
+        print("ERROR: Couldn't connect to database", file=sys.stderr)
+        sys.exit(1)
     app = create_app()
-    app.run(host="0.0.0.0", port=Config.PORT, debug=False)
+    app.run(host=Config.HOST, port=Config.PORT, debug=Config.DEBUG)
