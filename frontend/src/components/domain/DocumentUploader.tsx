@@ -57,15 +57,14 @@ export function DocumentUploader({ imageUrl, onChange }: DocumentUploaderProps) 
       >
         {imageUrl ? (
           <>
-            <img src={imageUrl} alt="Uploaded document preview" className="h-full w-full rounded-md object-cover" />
-            <button
+            <img src={imageUrl} alt="Uploaded document preview" className="h-full w-full rounded-md object-cover" />              <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onChange(null);
               }}
               aria-label="Remove uploaded document"
-              className="absolute right-2 top-2 rounded-full bg-slate-900/80 p-1 text-slate-200 hover:bg-slate-900"
+              className="absolute right-2 top-2 rounded-full bg-slate-900/80 p-1 text-slate-200 hover\:bg-slate-950 hover\:text-slate-100"
             >
               <X className="h-4 w-4" />
             </button>

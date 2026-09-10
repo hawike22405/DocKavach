@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { login } from "@/lib/api";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function LoginPage() {
-  const router = useRouter();
+  const login = useAuthStore((state) => state.login);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,11 +19,11 @@ export default function LoginPage() {
     setError(null);
     try {
       await login(email, password);
-      router.replace("/");
-      router.refresh();
+      // Force a full window hard-navigation to bypass Next.js router race conditions
+      // and ensure localStorage token is picked up cleanly on initial hydration.
+      window.location.href = "/";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
-    } finally {
       setLoading(false);
     }
   };

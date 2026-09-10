@@ -17,8 +17,6 @@ from services.tampering_service import analyze_tampering
 from services.facematch_service import match_faces
 from services.risk_service import compute_risk
 from services.activity_log import log_activity
-from pymongo.errors import DuplicateKeyError
-
 screening_bp = Blueprint("screening", __name__, url_prefix="/api")
 
 VALID_DOC_TYPES = {"PASSPORT", "VISA", "NATIONAL_ID"}
@@ -72,40 +70,28 @@ def screen_document():
     transaction_id = f"TXN-{int(time.time() * 1000):x}".upper()
     timestamp = datetime.datetime.utcnow().isoformat() + "Z"
 
-    response_payload = {
-        "transactionId": transaction_id,
-        "timestamp": timestamp,
-        "overallRiskScore": overall_risk_score,
-        "recommendation": recommendation,
-        "module1_OCR": fields,
-        "module2_Validation": validation,
-        "module3_Tampering": tampering,
-        "module4_FaceMatch": face_match,
-    }
-
     db = get_db()
-    try:
-        db.screenings.insert_one({
-            **response_payload,
-            "documentType": document_type,
-            "officerId": g.user_id,
-            "officerDecision": None,
-            "decisionTimestamp": None,
-        })
-    except DuplicateKeyError:
-        # Regenerate transactionId and timestamp on collision
-        transaction_id = f"TXN-{int(time.time() * 1000):x}".upper()
-        timestamp = datetime.datetime.utcnow().isoformat() + "Z"
-        response_payload["transactionId"] = transaction_id
-        response_payload["timestamp"] = timestamp
-        db.screenings.insert_one({
-            **response_payload,
-            "documentType": document_type,
-            "officerId": g.user_id,
-            "officerDecision": None,
-            "decisionTimestamp": None,
-        })
 
+    def build_screening_doc(txn_id, ts):
+        return {
+            "transactionId": txn_id,
+            "timestamp": ts,
+            "overallRiskScore": overall_risk_score,
+            "recommendation": recommendation,
+            "module1_OCR": fields,
+            "module2_Validation": validation,
+            "module3_Tampering": tampering,
+            "module4_FaceMatch": face_match,
+            "documentType": document_type,
+            "officerId": g.user_id,
+            "officerDecision": None,
+            "decisionTimestamp": None,
+        }
+
+    def insert_screening(txn_id, ts):
+        db.screenings.insert_one(build_screening_doc(txn_id, ts))
+
+    insert_screening(transaction_id, timestamp)
     log_activity(
         "SCREENING",
         officer_id=g.user_id,
@@ -113,4 +99,4 @@ def screen_document():
                "recommendation": recommendation, "riskScore": overall_risk_score},
     )
 
-    return ok(response_payload, "Screening complete")
+    return ok(build_screening_doc(transaction_id, timestamp), "Screening complete")

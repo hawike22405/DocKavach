@@ -19,8 +19,7 @@ interface Rect {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  // Points at the same route as Dashboard for now, matching Sidebar.tsx —
-  // give it its own route (e.g. "/scan") once the flows diverge.
+  // Points at the same route as Dashboard for now; split into its own route once the flows diverge.
   { label: "Scan Document", href: "/", icon: ScanLine },
   { label: "History", href: "/history", icon: History },
   { label: "Settings", href: "/settings", icon: Settings },
