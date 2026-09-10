@@ -12,13 +12,23 @@ from routes.logs import logs_bp
 import pytesseract
 import sys
 
+# Windows installs often don't add Tesseract to PATH even after install.
+# Rather than fighting Windows PATH edits, allow an explicit override —
+# set TESSERACT_CMD in .env to the full path of tesseract.exe.
+if Config.TESSERACT_CMD:
+    pytesseract.pytesseract.tesseract_cmd = Config.TESSERACT_CMD
+
 
 def check_tesseract():
     try:
         pytesseract.get_tesseract_version()
     except EnvironmentError as e:
-        print(f"ERROR: Tesseract OCR is not installed or not found in PATH: {e}", file=sys.stderr)
-        sys.exit(1)
+        print(
+            f"WARNING: Tesseract OCR not found ({e}). "
+            "The server will still start, but POST /api/screen will fail "
+            "until Tesseract is installed. Every other route works normally.",
+            file=sys.stderr,
+        )
 
 
 def create_app():
@@ -45,6 +55,10 @@ def create_app():
     @app.route("/api/health", methods=["GET"])
     def health():
         return {"success": True, "message": "DocKavach backend alive"}
+
+    @app.route("/", methods=["GET"])
+    def root():
+        return {"success": True, "message": "DocKavach API — see /api/health for status"}
 
     @app.errorhandler(400)
     def bad_request(e):

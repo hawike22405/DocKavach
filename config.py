@@ -26,6 +26,7 @@ class Config:
     DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
     MAX_CONTENT_LENGTH = _env_int("MAX_CONTENT_LENGTH", 16 * 1024 * 1024, 1, 32 * 1024 * 1024)
     FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+    TESSERACT_CMD = os.getenv("TESSERACT_CMD", "")
 
 
 if not Config.MONGO_URI:
