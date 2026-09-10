@@ -1,0 +1,35 @@
+
+> ssb-document-screening@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.25
+   - Local:        http://localhost:60356
+   - Network:      http://10.1.34.60:60356
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 4.1s
+ ○ Compiling / ...
+ GET / 500 in 7147ms
+ GET / 500 in 13ms
+ ✓ Compiled /_error in 442ms (803 modules)
+ ✓ Compiled in 119ms (803 modules)
+ ✓ Compiled in 257ms (803 modules)
+ ✓ Compiled in 287ms (803 modules)
+ ✓ Compiled / in 177ms (877 modules)
+ GET / 200 in 555ms
+ GET / 200 in 29ms
+ GET / 200 in 41ms
+ GET / 200 in 33ms
+ GET / 200 in 47ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 721ms (1673 modules)
+ GET /login 200 in 840ms
+ GET /login 200 in 38ms
+ GET /login 200 in 22ms
+ ✓ Compiled /register in 304ms (1680 modules)
+ GET /register 200 in 457ms
+ GET /login 200 in 22ms
+ GET /register 200 in 21ms
+ GET /login 200 in 21ms
+ GET / 200 in 151ms

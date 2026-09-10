@@ -52,6 +52,19 @@ body::before {
   outline-offset: 3px;
 }
 
+@layer base {
+  :root {
+    --accent: #43b9d9;
+    --accent-strong: #2f6fed;
+    --surface: #0b1f36;
+    --surface-raised: #0f2a46;
+    --border: rgba(148, 163, 184, 0.20);
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+  }
+}
+
 @layer components {
   .input-field {
     @apply w-full rounded-lg border border-white/10 bg-slate-950/45 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition-colors;
@@ -68,6 +81,41 @@ body::before {
   .gov-kicker {
     @apply text-xs font-medium uppercase tracking-[0.16em] text-slate-500;
   }
+
+  .accent { color: var(--accent); }
+  .bg-accent { background-color: var(--accent); }
+  .bg-accent--15 { background-color: rgba(59, 130, 246, 0.15); }
+  .text-accent { color: var(--accent); }
+  .text-accent--80 { color: rgba(59, 130, 246, 0.80); }
+  .border-accent { border-color: var(--accent); }
+  .border-accent--25 { border-color: rgba(59, 130, 246, 0.25); }
+  .border-accent--30 { border-color: rgba(59, 130, 246, 0.30); }
+  .border-accent--15 { border-color: rgba(59, 130, 246, 0.15); }
+  .hover-border-accent--30:hover { border-color: rgba(59, 130, 246, 0.30); }
+  .hover-bg-accent:hover { background-color: var(--accent); }
+  .bg-surface { background-color: var(--surface); }
+  .bg-surface-raised { background-color: var(--surface-raised); }
+  .border-border--60 { border-color: rgba(51, 65, 85, 0.60); }
+  .border-border--10 { border-color: rgba(51, 65, 85, 0.10); }
+  .border-border--30 { border-color: rgba(51, 65, 85, 0.30); }
+  .text-border { color: var(--border); }
+  .text-success { color: var(--success); }
+  .bg-success { background-color: var(--success); }
+  .hover-bg-success:hover { background-color: #059669; }
+  .text-danger { color: var(--danger); }
+  .bg-danger { background-color: var(--danger); }
+  .bg-danger--10 { background-color: rgba(239, 68, 68, 0.10); }
+  .border-danger--30 { border-color: rgba(239, 68, 68, 0.30); }
+  .text-warning { color: var(--warning); }
+  .bg-warning { background-color: var(--warning); }
+  .bg-warning--10 { background-color: rgba(245, 158, 11, 0.10); }
+  .border-warning--30 { border-color: rgba(245, 158, 11, 0.30); }
+  .hover-bg-surface-raised:hover { background-color: var(--surface-raised); }
+  .hover-text-slate-100:hover { color: var(--gov-slate-100); }
+  .hover-text-slate-200:hover { color: #cbd5e1; }
+  .hover-border-slate-500:hover { border-color: #64748b; }
+  .ring-cyan-400--40 { --tw-ring-color: rgba(67, 185, 217, 0.40); }
+  .ring-inset { --tw-ring-inset: inset; }
 
   .scan-loader {
     position: relative;

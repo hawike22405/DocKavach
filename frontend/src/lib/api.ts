@@ -1,6 +1,8 @@
 import type { ScreeningRequest, ScreeningResponse, OfficerDecision } from "./types";
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api").replace(/\/$/, "");
+// FIXED: Safely parses the environment variable, removes accidental spaces, and ensures "/api" is always present.
+const envUrl = (process.env.NEXT_PUBLIC_API_URL || "http://10.181.68.50:5000/api").trim().replace(/\/$/, "");
+const API_BASE_URL = envUrl.endsWith("api") ? envUrl : `${envUrl}/api`;
 
 export type ApiResponse<T> = {
   success: boolean;
