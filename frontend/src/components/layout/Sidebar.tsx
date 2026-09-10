@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, ScanLine, History, Settings, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, ScanLine, History, Settings, ShieldCheck, Activity } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import clsx from "clsx";
@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Scan Document", href: "/", icon: ScanLine },
   { label: "History", href: "/history", icon: History },
+  { label: "Activity", href: "/activity", icon: Activity },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 

@@ -9,6 +9,8 @@ class Config:
     JWT_SECRET = os.getenv("JWT_SECRET")
     JWT_EXP_HOURS = int(os.getenv("JWT_EXP_HOURS", 24))
     PORT = int(os.getenv("PORT", 5000))
+    FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+    MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", 16 * 1024 * 1024))
 
 if not Config.MONGO_URI:
     raise RuntimeError("MONGO_URI missing in .env")

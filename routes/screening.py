@@ -1,10 +1,8 @@
 """
 POST /api/screen
 
-This is the real implementation of the pipeline that frontend/src/lib/mockApi.ts
-currently simulates. Request/response shapes match frontend/src/lib/types.ts
-exactly (ScreeningRequest / ScreeningResponse) so the frontend can swap
-mockApi.screenDocument() for a fetch to this endpoint with no other changes.
+Real implementation of the pipeline that frontend/src/lib/mockApi.ts used to
+simulate. Request/response shapes match frontend/src/lib/types.ts exactly.
 """
 import time
 import datetime
@@ -18,6 +16,7 @@ from services.validation_service import validate_fields
 from services.tampering_service import analyze_tampering
 from services.facematch_service import match_faces
 from services.risk_service import compute_risk
+from services.activity_log import log_activity
 
 screening_bp = Blueprint("screening", __name__, url_prefix="/api")
 
@@ -52,7 +51,7 @@ def screen_document():
     # ---- Module 1: OCR ----
     fields, ocr_errors = run_ocr(doc_img, document_type)
 
-    # ---- Module 4: face match (run before tampering so we can cross-reference the face box) ----
+    # ---- Module 4: face match (before tampering so we can cross-reference the face box) ----
     face_match, face_box, face_note = match_faces(doc_img, live_img)
 
     # ---- Module 3: tampering ----
@@ -83,7 +82,6 @@ def screen_document():
         "module4_FaceMatch": face_match,
     }
 
-    # persist for the history/audit log
     db = get_db()
     db.screenings.insert_one({
         **response_payload,
@@ -92,5 +90,12 @@ def screen_document():
         "officerDecision": None,
         "decisionTimestamp": None,
     })
+
+    log_activity(
+        "SCREENING",
+        officer_id=g.user_id,
+        extra={"transactionId": transaction_id, "documentType": document_type,
+               "recommendation": recommendation, "riskScore": overall_risk_score},
+    )
 
     return ok(response_payload, "Screening complete")

@@ -4,6 +4,7 @@ from utils.hash import hash_password, verify_password
 from utils.jwt_handler import create_token
 from utils.response import ok, fail
 from middleware.auth_required import auth_required
+from services.activity_log import log_activity
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
@@ -30,10 +31,13 @@ def register():
         "badgeId": badge_id,
     }
     result = db.officers.insert_one(officer_doc)
+    officer_id = str(result.inserted_id)
 
-    token = create_token(str(result.inserted_id), {"email": email})
+    log_activity("REGISTER", officer_id=officer_id, email=email, name=name)
+
+    token = create_token(officer_id, {"email": email})
     return ok(
-        {"token": token, "officer": {"id": str(result.inserted_id), "name": name, "email": email, "badgeId": badge_id}},
+        {"token": token, "officer": {"id": officer_id, "name": name, "email": email, "badgeId": badge_id}},
         "Registered successfully", 201,
     )
 
@@ -50,11 +54,15 @@ def login():
     db = get_db()
     officer = db.officers.find_one({"email": email})
     if not officer or not verify_password(password, officer["password"]):
+        log_activity("LOGIN_FAILED", officer_id=None, email=email, name=None)
         return fail("Invalid credentials", 401)
 
-    token = create_token(str(officer["_id"]), {"email": email})
+    officer_id = str(officer["_id"])
+    log_activity("LOGIN", officer_id=officer_id, email=email, name=officer["name"])
+
+    token = create_token(officer_id, {"email": email})
     return ok(
-        {"token": token, "officer": {"id": str(officer["_id"]), "name": officer["name"], "email": email,
+        {"token": token, "officer": {"id": officer_id, "name": officer["name"], "email": email,
                                       "badgeId": officer.get("badgeId", "")}},
         "Login successful",
     )

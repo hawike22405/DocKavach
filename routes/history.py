@@ -2,6 +2,7 @@ from flask import Blueprint, request, g
 from db import get_db
 from utils.response import ok, fail
 from middleware.auth_required import auth_required
+from services.activity_log import log_activity
 import datetime
 
 history_bp = Blueprint("history", __name__, url_prefix="/api/history")
@@ -19,7 +20,7 @@ def list_history():
 
     page = max(1, int(request.args.get("page", 1)))
     limit = min(100, max(1, int(request.args.get("limit", 20))))
-    recommendation = request.args.get("recommendation")  # optional filter: APPROVE/REVIEW/REJECT
+    recommendation = request.args.get("recommendation")
     mine_only = request.args.get("mine") == "true"
 
     query = {}
@@ -69,4 +70,8 @@ def set_decision(transaction_id):
     )
     if result.matched_count == 0:
         return fail("Transaction not found", 404)
+
+    log_activity("DECISION", officer_id=g.user_id,
+                 extra={"transactionId": transaction_id, "decision": decision})
+
     return ok(None, "Decision recorded")
