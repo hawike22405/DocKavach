@@ -4,8 +4,9 @@ pymongo==4.8.0
 python-dotenv==1.0.1
 PyJWT==2.9.0
 bcrypt==4.2.0
-pytesseract==0.3.13
-opencv-python-headless==4.10.0.84
+paddleocr==2.7.3
+paddlepaddle==2.6.2
+opencv-contrib-python==4.6.0.66
 Pillow==10.4.0
 numpy==1.26.4
 Flask-Limiter==4.1.1

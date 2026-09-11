@@ -9,15 +9,14 @@ from routes.screening import screening_bp
 from routes.history import history_bp
 from routes.settings import settings_bp
 from routes.logs import logs_bp
-import pytesseract
 import sys
 
 
-def check_tesseract():
+def check_ocr_engine():
     try:
-        pytesseract.get_tesseract_version()
-    except EnvironmentError as e:
-        print(f"ERROR: Tesseract OCR is not installed or not found in PATH: {e}", file=sys.stderr)
+        from paddleocr import PaddleOCR  # noqa: F401
+    except ImportError as e:
+        print(f"ERROR: PaddleOCR is not installed: {e}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -71,7 +70,7 @@ def create_app():
 
 
 if __name__ == "__main__":
-    check_tesseract()
+    check_ocr_engine()
     if not test_connection():
         print("ERROR: Couldn't connect to database", file=sys.stderr)
         sys.exit(1)

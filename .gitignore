@@ -1,5 +1,8 @@
 .env
 venv/
+.venv/
 __pycache__/
 *.pyc
 .vscode/
+frontend/node_modules/
+frontend/.next/

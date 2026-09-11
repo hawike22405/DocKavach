@@ -1,8 +1,7 @@
 """
 Module 1: OCR extraction.
-For PASSPORT: preprocesses the image, runs tesseract on a whitelisted crop
-of the MRZ band (falling back to the full page if that doesn't pan out),
-locates the MRZ block, and parses it (mrz_parser).
+For PASSPORT: preprocesses the image, runs PaddleOCR on the full page and
+on a cropped MRZ band, locates the MRZ block, and parses it (mrz_parser).
 For VISA / NATIONAL_ID (no standard MRZ): runs plain OCR and applies
 light heuristics to pull a name / number / dates from the raw text,
 since these formats vary by issuing country.
@@ -10,24 +9,21 @@ since these formats vary by issuing country.
 import re
 import cv2
 import numpy as np
-import pytesseract
 from PIL import Image
+from services.paddle_ocr import run_paddle_ocr
 from services.mrz_parser import parse_mrz
 
-# MRZ text is printed in OCR-B, a font stock Tesseract's general English
-# model reads poorly without help. Restricting the whitelist to the actual
-# MRZ alphabet removes most of the "looks-plausible-but-wrong" character
-# substitutions that were producing garbage name/DOB/document-number fields.
-MRZ_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<"
+# MRZ text alphabet — still used to filter PaddleOCR output lines when
+# deciding which lines are MRZ candidates.
+MRZ_CHARSET = set("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<")
 
 
 def _preprocess_for_ocr(img: Image.Image) -> Image.Image:
     """Grayscale + deskew + denoise + adaptive threshold.
 
-    Tesseract accuracy on a phone/webcam photo of a document (uneven
-    lighting, slight rotation/skew, JPEG noise) is dramatically better on a
-    clean binarized image than on the raw color photo we were feeding it
-    before.
+    PaddleOCR handles noisy photos better than Tesseract out of the box,
+    but binarization still helps on low-contrast webcam captures with
+    uneven lighting.
     """
     cv_img = cv2.cvtColor(np.array(img.convert("RGB")), cv2.COLOR_RGB2BGR)
     gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
@@ -50,32 +46,33 @@ def _preprocess_for_ocr(img: Image.Image) -> Image.Image:
     return Image.fromarray(binarized)
 
 
+def _paddle_to_text(img: Image.Image) -> str:
+    """Run PaddleOCR on a PIL image and join the detected lines into a
+    single plain-text string (one OCR line per text line), which is the
+    format mrz_parser and _heuristic_extract expect."""
+    cv_img = np.array(img.convert("RGB"))
+    results = run_paddle_ocr(cv_img)
+    return "\n".join(r["text"] for r in results)
+
+
 def _ocr_mrz_band(img: Image.Image) -> str:
     """MRZ always sits in the bottom band of a passport photo page.
-    Cropping to just that band and whitelisting tesseract's character set
-    to the MRZ alphabet avoids most of the misreads that happen when
-    tesseract runs its general model over the whole page (names, seals,
-    background patterns, etc. all add noise to that pass)."""
+    Cropping to just that band reduces noise from names, seals, and
+    background patterns that confuse the OCR."""
     w, h = img.size
     band = img.crop((0, int(h * 0.72), w, h))
-    config = f"--psm 6 -c tessedit_char_whitelist={MRZ_CHARSET}"
-    return pytesseract.image_to_string(band, config=config)
+    return _paddle_to_text(band)
 
 
 def run_ocr(img: Image.Image, document_type: str):
-    # Upscale small images — tesseract accuracy drops badly below ~300dpi equivalent
+    # Upscale small images — OCR accuracy drops badly below ~300dpi equivalent
     w, h = img.size
     if max(w, h) < 1200:
         scale = 1200 / max(w, h)
         img = img.resize((int(w * scale), int(h * scale)))
 
     processed = _preprocess_for_ocr(img)
-    # --psm 6 ("assume a single uniform block of text") is more reliable
-    # here than Tesseract's default automatic page segmentation, which can
-    # silently drop an isolated text block (like the MRZ sitting below a
-    # gap under the personal-details fields) that it doesn't confidently
-    # classify as part of the page layout.
-    raw_text = pytesseract.image_to_string(processed, config="--psm 6")
+    raw_text = _paddle_to_text(processed)
 
     if document_type == "PASSPORT":
         mrz_band_text = _ocr_mrz_band(processed)

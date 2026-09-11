@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeading } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -85,10 +85,29 @@ export default function DashboardPage() {
     }
   };
 
-  useEffect(() => () => {
-    if (documentImage?.startsWith("blob:")) URL.revokeObjectURL(documentImage);
-    if (liveFaceImage?.startsWith("blob:")) URL.revokeObjectURL(liveFaceImage);
-  }, [documentImage, liveFaceImage]);
+  const prevDocRef = useRef(documentImage);
+  const prevFaceRef = useRef(liveFaceImage);
+
+  useEffect(() => {
+    if (prevDocRef.current && prevDocRef.current !== documentImage && prevDocRef.current.startsWith("blob:")) {
+      URL.revokeObjectURL(prevDocRef.current);
+    }
+    prevDocRef.current = documentImage;
+  }, [documentImage]);
+
+  useEffect(() => {
+    if (prevFaceRef.current && prevFaceRef.current !== liveFaceImage && prevFaceRef.current.startsWith("blob:")) {
+      URL.revokeObjectURL(prevFaceRef.current);
+    }
+    prevFaceRef.current = liveFaceImage;
+  }, [liveFaceImage]);
+
+  useEffect(() => {
+    return () => {
+      if (prevDocRef.current?.startsWith("blob:")) URL.revokeObjectURL(prevDocRef.current);
+      if (prevFaceRef.current?.startsWith("blob:")) URL.revokeObjectURL(prevFaceRef.current);
+    };
+  }, []);
 
   if (!authorized) {
     return (
